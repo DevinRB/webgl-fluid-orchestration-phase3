@@ -146,6 +146,24 @@ function applyBarriersToVelocity() {
     }
 }
 
+// BARRIER FEATURE: Clear dye at barrier positions for solid appearance
+function applyBarriersToDye() {
+    if (barriers.length === 0) return;
+
+    splatProgram.bind();
+    gl.uniform1i(splatProgram.uniforms.uTarget, dye.read.attach(0));
+    gl.uniform1f(splatProgram.uniforms.aspectRatio, canvas.width / canvas.height);
+
+    // Clear dye at barrier positions (set to dark/low density)
+    barriers.forEach(barrier => {
+        gl.uniform2f(splatProgram.uniforms.point, barrier.x, barrier.y);
+        gl.uniform3f(splatProgram.uniforms.color, 0.1, 0.1, 0.1); // Very low dye density
+        gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius));
+        blit(dye.write);
+        dye.swap();
+    });
+}
+
 const { gl, ext } = getWebGLContext(canvas);
 
 if (isMobile()) {
@@ -1343,6 +1361,9 @@ function step (dt) {
     gl.uniform1f(advectionProgram.uniforms.dissipation, config.DENSITY_DISSIPATION);
     blit(dye.write);
     dye.swap();
+
+    // BARRIER FEATURE: Also block dye at barrier positions for solid appearance
+    applyBarriersToDye();
 }
 
 function render (target) {

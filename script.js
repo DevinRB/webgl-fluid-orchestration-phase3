@@ -107,6 +107,7 @@ pointers.push(new pointerPrototype());
 // Each barrier is { x: number (0-1), y: number (0-1), radius: number }
 let barriers = [];
 let barrierPreview = null; // { x, y, radius } when Shift is held
+let barrierHoverIndex = -1; // Index of barrier currently hovered (for removal preview)
 
 /**
  * Add a barrier at the specified texture coordinates
@@ -126,6 +127,7 @@ function addBarrier(x, y, radius = null) {
  */
 function clearBarriers() {
     barriers = [];
+    barrierHoverIndex = -1;
     console.log('All barriers cleared');
     updateBarrierCount();
 }
@@ -148,6 +150,7 @@ function removeBarrierAt(x, y) {
 
     if (index !== -1) {
         barriers.splice(index, 1);
+        barrierHoverIndex = -1; // Reset hover after removal
         console.log(`Barrier removed at index ${index}, remaining: ${barriers.length}`);
         updateBarrierCount();
         return true;
@@ -1492,9 +1495,16 @@ function drawBarriers(target) {
 
     // Draw all placed barriers
     if (allBarriers) {
-        barriers.forEach(barrier => {
+        barriers.forEach((barrier, index) => {
             gl.uniform2f(splatProgram.uniforms.point, barrier.x, barrier.y);
-            gl.uniform3f(splatProgram.uniforms.color, 10.0, 10.0, 10.0); // Bright white (10x intensity)
+
+            // BARRIER FEATURE: Highlight hovered barrier in red (removal preview)
+            if (index === barrierHoverIndex) {
+                gl.uniform3f(splatProgram.uniforms.color, 10.0, 2.0, 2.0); // Red highlight
+            } else {
+                gl.uniform3f(splatProgram.uniforms.color, 10.0, 10.0, 10.0); // Bright white (10x intensity)
+            }
+
             gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius));
             blit(dye.write);
             dye.swap();
@@ -1652,21 +1662,30 @@ canvas.addEventListener('mousedown', e => {
 });
 
 canvas.addEventListener('mousemove', e => {
+    let posX = scaleByPixelRatio(e.offsetX);
+    let posY = scaleByPixelRatio(e.offsetY);
+    let texX = posX / canvas.width;
+    let texY = 1.0 - posY / canvas.height;
+
     // BARRIER FEATURE: Show preview when Shift is held
     if (e.shiftKey) {
-        let posX = scaleByPixelRatio(e.offsetX);
-        let posY = scaleByPixelRatio(e.offsetY);
-        let texX = posX / canvas.width;
-        let texY = 1.0 - posY / canvas.height;
         barrierPreview = { x: texX, y: texY, radius: config.BARRIER_RADIUS };
+        barrierHoverIndex = -1; // Clear hover when in placement mode
     } else {
         barrierPreview = null;
+
+        // BARRIER FEATURE: Check if hovering over a removable barrier
+        const clickRadius = config.BARRIER_RADIUS * 2;
+        barrierHoverIndex = barriers.findIndex(barrier => {
+            const dx = barrier.x - texX;
+            const dy = barrier.y - texY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return distance <= clickRadius;
+        });
     }
 
     let pointer = pointers[0];
     if (!pointer.down) return;
-    let posX = scaleByPixelRatio(e.offsetX);
-    let posY = scaleByPixelRatio(e.offsetY);
     updatePointerMoveData(pointer, posX, posY);
 });
 

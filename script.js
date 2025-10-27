@@ -114,6 +114,23 @@ function clearBarriers() {
     console.log('All barriers cleared');
 }
 
+// BARRIER FEATURE: Zero out velocity at barrier positions
+function applyBarriersToVelocity() {
+    if (barriers.length === 0) return;
+
+    splatProgram.bind();
+    gl.uniform1i(splatProgram.uniforms.uTarget, velocity.read.attach(0));
+    gl.uniform1f(splatProgram.uniforms.aspectRatio, canvas.width / canvas.height);
+
+    barriers.forEach(barrier => {
+        gl.uniform2f(splatProgram.uniforms.point, barrier.x, barrier.y);
+        gl.uniform3f(splatProgram.uniforms.color, 0.0, 0.0, 0.0); // Zero velocity
+        gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius));
+        blit(velocity.write);
+        velocity.swap();
+    });
+}
+
 const { gl, ext } = getWebGLContext(canvas);
 
 if (isMobile()) {
@@ -1296,6 +1313,9 @@ function step (dt) {
     gl.uniform1f(advectionProgram.uniforms.dissipation, config.VELOCITY_DISSIPATION);
     blit(velocity.write);
     velocity.swap();
+
+    // BARRIER FEATURE: Apply barriers to block velocity
+    applyBarriersToVelocity();
 
     if (!ext.supportLinearFiltering)
         gl.uniform2f(advectionProgram.uniforms.dyeTexelSize, dye.texelSizeX, dye.texelSizeY);

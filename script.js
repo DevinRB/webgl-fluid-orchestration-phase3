@@ -1802,6 +1802,16 @@ window.addEventListener('keydown', e => {
             instructions.style.display = instructions.style.display === 'none' ? 'block' : 'none';
         }
     }
+    // BARRIER FEATURE: Press '+' or '=' to increase barrier size
+    if (e.key === '+' || e.key === '=') {
+        config.BARRIER_RADIUS = Math.min(0.1, config.BARRIER_RADIUS + 0.005);
+        console.log(`Barrier radius increased to ${config.BARRIER_RADIUS.toFixed(3)}`);
+    }
+    // BARRIER FEATURE: Press '-' or '_' to decrease barrier size
+    if (e.key === '-' || e.key === '_') {
+        config.BARRIER_RADIUS = Math.max(0.005, config.BARRIER_RADIUS - 0.005);
+        console.log(`Barrier radius decreased to ${config.BARRIER_RADIUS.toFixed(3)}`);
+    }
 });
 
 // BARRIER FEATURE: Prevent context menu on canvas (for right-click barrier removal)

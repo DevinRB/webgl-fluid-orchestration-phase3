@@ -11,8 +11,9 @@ This WebGL Fluid Simulation now includes interactive barrier placement that allo
 - **Preview Placement**: Hold `Shift` key and move mouse to see preview circle before clicking
 - **Remove Barrier**: Right-click on an existing barrier (hover highlights it in red, cursor shows pointer)
 - **Clear All Barriers**: Press `C` key or click "Clear barriers (C)" button in GUI
+- **Adjust Size (Quick)**: Press `+` or `-` keys to increase/decrease barrier radius
+- **Adjust Size (Precise)**: Use the "barrier radius" slider in the GUI (right side)
 - **Hide/Show Instructions**: Press `H` key to toggle instruction overlay
-- **Adjust Barrier Size**: Use the "barrier radius" slider in the GUI (right side)
 - **Save Layout**: Click "Save barriers" button in GUI (persists to localStorage)
 - **Load Layout**: Click "Load barriers" button in GUI (auto-loads on page load)
 

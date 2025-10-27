@@ -1590,8 +1590,8 @@ function render (target) {
         drawCheckerboard(target);
     drawDisplay(target);
 
-    // BARRIER FEATURE: Draw barriers on top of fluid
-    drawBarriers(target);
+    // BARRIER FEATURE: Barriers are rendered by applyBarriersToDye() in the simulation step
+    // which clears dye at barrier positions, making them visible as dark circles
 }
 
 function drawColor (target, color) {
@@ -1625,41 +1625,49 @@ function drawDisplay (target) {
     blit(target);
 }
 
-// BARRIER FEATURE: Draw barriers as bright white circles
+// BARRIER FEATURE: Draw barriers as bright white circles (visual overlay)
 function drawBarriers(target) {
     if (barriers.length === 0 && !barrierPreview) return;
 
-    // Use splatProgram to draw bright white circles at barrier positions
+    // Use displayMaterial to render barriers directly to screen (not dye buffer)
+    displayMaterial.bind();
+    gl.uniform1i(displayMaterial.uniforms.uTexture, dye.read.attach(0));
+
+    // Draw base fluid first
+    blit(target);
+
+    // Now draw barriers on top using splatProgram but to the TARGET, not dye buffer
     splatProgram.bind();
-    gl.uniform1i(splatProgram.uniforms.uTarget, dye.read.attach(0));
+    if (target) {
+        gl.uniform1i(splatProgram.uniforms.uTarget, target);
+    } else {
+        // Render to screen
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
     gl.uniform1f(splatProgram.uniforms.aspectRatio, canvas.width / canvas.height);
 
-    // Draw all placed barriers WITHOUT swapping between each one
+    // Draw all placed barriers
     barriers.forEach((barrier, index) => {
         gl.uniform2f(splatProgram.uniforms.point, barrier.x, barrier.y);
 
         // BARRIER FEATURE: Highlight hovered barrier in red (removal preview)
         if (index === barrierHoverIndex) {
-            gl.uniform3f(splatProgram.uniforms.color, 0.5, 0.1, 0.1); // Red highlight
+            gl.uniform3f(splatProgram.uniforms.color, 1.0, 0.2, 0.2); // Red highlight
         } else {
-            gl.uniform3f(splatProgram.uniforms.color, 0.5, 0.5, 0.5); // Bright white
+            gl.uniform3f(splatProgram.uniforms.color, 0.8, 0.8, 0.8); // Light gray/white
         }
 
         gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius));
-        blit(dye.write);
-        // DO NOT SWAP HERE - it corrupts the render
+        blit(target);
     });
 
     // Draw preview barrier if Shift is held
     if (barrierPreview) {
         gl.uniform2f(splatProgram.uniforms.point, barrierPreview.x, barrierPreview.y);
-        gl.uniform3f(splatProgram.uniforms.color, 0.3, 0.3, 0.3); // Dimmer for preview
+        gl.uniform3f(splatProgram.uniforms.color, 0.5, 0.5, 0.5); // Dimmer for preview
         gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrierPreview.radius));
-        blit(dye.write);
+        blit(target);
     }
-
-    // Swap ONCE at the end after all barriers are drawn
-    dye.swap();
 }
 
 function applyBloom (source, destination) {

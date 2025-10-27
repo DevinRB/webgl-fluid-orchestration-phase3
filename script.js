@@ -1862,6 +1862,14 @@ canvas.addEventListener('contextmenu', e => {
     e.preventDefault();
 });
 
+// BARRIER FEATURE: Clear preview when Shift key is released
+window.addEventListener('keyup', e => {
+    if (e.key === 'Shift') {
+        barrierPreview = null;
+        canvas.style.cursor = 'default';
+    }
+});
+
 function updatePointerDownData (pointer, id, posX, posY) {
     pointer.id = id;
     pointer.down = true;

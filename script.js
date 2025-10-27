@@ -1684,6 +1684,13 @@ window.addEventListener('keydown', e => {
     // BARRIER FEATURE: Press 'C' to clear all barriers
     if (e.code === 'KeyC')
         clearBarriers();
+    // BARRIER FEATURE: Press 'H' to hide/show instructions
+    if (e.code === 'KeyH') {
+        const instructions = document.getElementById('barrier-instructions');
+        if (instructions) {
+            instructions.style.display = instructions.style.display === 'none' ? 'block' : 'none';
+        }
+    }
 });
 
 function updatePointerDownData (pointer, id, posX, posY) {

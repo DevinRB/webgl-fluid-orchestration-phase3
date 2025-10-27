@@ -1671,6 +1671,7 @@ canvas.addEventListener('mousemove', e => {
     if (e.shiftKey) {
         barrierPreview = { x: texX, y: texY, radius: config.BARRIER_RADIUS };
         barrierHoverIndex = -1; // Clear hover when in placement mode
+        canvas.style.cursor = 'crosshair'; // Placement cursor
     } else {
         barrierPreview = null;
 
@@ -1682,6 +1683,9 @@ canvas.addEventListener('mousemove', e => {
             const distance = Math.sqrt(dx * dx + dy * dy);
             return distance <= clickRadius;
         });
+
+        // Set cursor based on hover state
+        canvas.style.cursor = barrierHoverIndex !== -1 ? 'pointer' : 'default';
     }
 
     let pointer = pointers[0];

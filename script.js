@@ -101,6 +101,18 @@ let pointers = [];
 let splatStack = [];
 pointers.push(new pointerPrototype());
 
+// Barrier system for fluid obstacles
+let barriers = [];
+const BARRIER_RADIUS = 0.02;
+
+function addBarrier(x, y, radius = BARRIER_RADIUS) {
+    barriers.push({ x, y, radius });
+}
+
+function clearBarriers() {
+    barriers = [];
+}
+
 const { gl, ext } = getWebGLContext(canvas);
 
 if (isMobile()) {
@@ -528,6 +540,28 @@ const colorShader = compileShader(gl.FRAGMENT_SHADER, `
     }
 `);
 
+const barrierDisplayShader = compileShader(gl.FRAGMENT_SHADER, `
+    precision highp float;
+
+    varying vec2 vUv;
+    uniform float aspectRatio;
+    uniform vec2 point;
+    uniform float radius;
+
+    void main () {
+        vec2 p = vUv - point.xy;
+        p.x *= aspectRatio;
+        float dist = length(p);
+
+        // Draw bright white circle for barrier
+        if (dist < radius) {
+            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        } else {
+            discard;
+        }
+    }
+`);
+
 const checkerboardShader = compileShader(gl.FRAGMENT_SHADER, `
     precision highp float;
     precision highp sampler2D;
@@ -740,6 +774,32 @@ const splatShader = compileShader(gl.FRAGMENT_SHADER, `
         vec3 splat = exp(-dot(p, p) / radius) * color;
         vec3 base = texture2D(uTarget, vUv).xyz;
         gl_FragColor = vec4(base + splat, 1.0);
+    }
+`);
+
+const barrierShader = compileShader(gl.FRAGMENT_SHADER, `
+    precision highp float;
+    precision highp sampler2D;
+
+    varying vec2 vUv;
+    uniform sampler2D uTarget;
+    uniform float aspectRatio;
+    uniform vec2 point;
+    uniform float radius;
+
+    void main () {
+        vec2 p = vUv - point.xy;
+        p.x *= aspectRatio;
+        float dist = length(p);
+
+        vec4 base = texture2D(uTarget, vUv);
+
+        // Inside barrier: set to zero
+        if (dist < radius) {
+            gl_FragColor = vec4(0.0);
+        } else {
+            gl_FragColor = base;
+        }
     }
 `);
 
@@ -959,23 +1019,25 @@ let sunraysTemp;
 
 let ditheringTexture = createTextureAsync('LDR_LLL1_0.png');
 
-const blurProgram            = new Program(blurVertexShader, blurShader);
-const copyProgram            = new Program(baseVertexShader, copyShader);
-const clearProgram           = new Program(baseVertexShader, clearShader);
-const colorProgram           = new Program(baseVertexShader, colorShader);
-const checkerboardProgram    = new Program(baseVertexShader, checkerboardShader);
-const bloomPrefilterProgram  = new Program(baseVertexShader, bloomPrefilterShader);
-const bloomBlurProgram       = new Program(baseVertexShader, bloomBlurShader);
-const bloomFinalProgram      = new Program(baseVertexShader, bloomFinalShader);
-const sunraysMaskProgram     = new Program(baseVertexShader, sunraysMaskShader);
-const sunraysProgram         = new Program(baseVertexShader, sunraysShader);
-const splatProgram           = new Program(baseVertexShader, splatShader);
-const advectionProgram       = new Program(baseVertexShader, advectionShader);
-const divergenceProgram      = new Program(baseVertexShader, divergenceShader);
-const curlProgram            = new Program(baseVertexShader, curlShader);
-const vorticityProgram       = new Program(baseVertexShader, vorticityShader);
-const pressureProgram        = new Program(baseVertexShader, pressureShader);
-const gradienSubtractProgram = new Program(baseVertexShader, gradientSubtractShader);
+const blurProgram              = new Program(blurVertexShader, blurShader);
+const copyProgram              = new Program(baseVertexShader, copyShader);
+const clearProgram             = new Program(baseVertexShader, clearShader);
+const colorProgram             = new Program(baseVertexShader, colorShader);
+const barrierDisplayProgram    = new Program(baseVertexShader, barrierDisplayShader);
+const checkerboardProgram      = new Program(baseVertexShader, checkerboardShader);
+const bloomPrefilterProgram    = new Program(baseVertexShader, bloomPrefilterShader);
+const bloomBlurProgram         = new Program(baseVertexShader, bloomBlurShader);
+const bloomFinalProgram        = new Program(baseVertexShader, bloomFinalShader);
+const sunraysMaskProgram       = new Program(baseVertexShader, sunraysMaskShader);
+const sunraysProgram           = new Program(baseVertexShader, sunraysShader);
+const splatProgram             = new Program(baseVertexShader, splatShader);
+const barrierProgram           = new Program(baseVertexShader, barrierShader);
+const advectionProgram         = new Program(baseVertexShader, advectionShader);
+const divergenceProgram        = new Program(baseVertexShader, divergenceShader);
+const curlProgram              = new Program(baseVertexShader, curlShader);
+const vorticityProgram         = new Program(baseVertexShader, vorticityShader);
+const pressureProgram          = new Program(baseVertexShader, pressureShader);
+const gradienSubtractProgram   = new Program(baseVertexShader, gradientSubtractShader);
 
 const displayMaterial = new Material(baseVertexShader, displayShaderSource);
 
@@ -1291,6 +1353,9 @@ function step (dt) {
     gl.uniform1f(advectionProgram.uniforms.dissipation, config.DENSITY_DISSIPATION);
     blit(dye.write);
     dye.swap();
+
+    // Apply barriers to enforce zero velocity/dye at obstacle positions
+    applyBarriers();
 }
 
 function render (target) {
@@ -1314,6 +1379,7 @@ function render (target) {
     if (target == null && config.TRANSPARENT)
         drawCheckerboard(target);
     drawDisplay(target);
+    drawBarriers(target);
 }
 
 function drawColor (target, color) {
@@ -1345,6 +1411,23 @@ function drawDisplay (target) {
     if (config.SUNRAYS)
         gl.uniform1i(displayMaterial.uniforms.uSunrays, sunrays.attach(3));
     blit(target);
+}
+
+function drawBarriers(target) {
+    if (barriers.length === 0) return;
+
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.BLEND);
+
+    barrierDisplayProgram.bind();
+    gl.uniform1f(barrierDisplayProgram.uniforms.aspectRatio, canvas.width / canvas.height);
+
+    for (let i = 0; i < barriers.length; i++) {
+        let barrier = barriers[i];
+        gl.uniform2f(barrierDisplayProgram.uniforms.point, barrier.x, barrier.y);
+        gl.uniform1f(barrierDisplayProgram.uniforms.radius, correctRadius(barrier.radius));
+        blit(target);
+    }
 }
 
 function applyBloom (source, destination) {
@@ -1454,6 +1537,33 @@ function splat (x, y, dx, dy, color) {
     dye.swap();
 }
 
+function applyBarriers() {
+    if (barriers.length === 0) return;
+
+    barrierProgram.bind();
+    gl.uniform1f(barrierProgram.uniforms.aspectRatio, canvas.width / canvas.height);
+
+    // Apply barriers to velocity field
+    for (let i = 0; i < barriers.length; i++) {
+        let barrier = barriers[i];
+        gl.uniform1i(barrierProgram.uniforms.uTarget, velocity.read.attach(0));
+        gl.uniform2f(barrierProgram.uniforms.point, barrier.x, barrier.y);
+        gl.uniform1f(barrierProgram.uniforms.radius, correctRadius(barrier.radius));
+        blit(velocity.write);
+        velocity.swap();
+    }
+
+    // Apply barriers to dye field
+    for (let i = 0; i < barriers.length; i++) {
+        let barrier = barriers[i];
+        gl.uniform1i(barrierProgram.uniforms.uTarget, dye.read.attach(0));
+        gl.uniform2f(barrierProgram.uniforms.point, barrier.x, barrier.y);
+        gl.uniform1f(barrierProgram.uniforms.radius, correctRadius(barrier.radius));
+        blit(dye.write);
+        dye.swap();
+    }
+}
+
 function correctRadius (radius) {
     let aspectRatio = canvas.width / canvas.height;
     if (aspectRatio > 1)
@@ -1464,6 +1574,15 @@ function correctRadius (radius) {
 canvas.addEventListener('mousedown', e => {
     let posX = scaleByPixelRatio(e.offsetX);
     let posY = scaleByPixelRatio(e.offsetY);
+
+    // Shift+Click to place barrier
+    if (e.shiftKey) {
+        let x = posX / canvas.width;
+        let y = 1.0 - posY / canvas.height;
+        addBarrier(x, y);
+        return;
+    }
+
     let pointer = pointers.find(p => p.id == -1);
     if (pointer == null)
         pointer = new pointerPrototype();
@@ -1521,6 +1640,8 @@ window.addEventListener('keydown', e => {
         config.PAUSED = !config.PAUSED;
     if (e.key === ' ')
         splatStack.push(parseInt(Math.random() * 20) + 5);
+    if (e.code === 'KeyC')
+        clearBarriers();
 });
 
 function updatePointerDownData (pointer, id, posX, posY) {

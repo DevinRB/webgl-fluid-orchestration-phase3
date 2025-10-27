@@ -131,6 +131,31 @@ function clearBarriers() {
 }
 
 /**
+ * Remove a single barrier at the specified location (if one exists nearby)
+ * @param {number} x - X coordinate in texture space (0-1)
+ * @param {number} y - Y coordinate in texture space (0-1)
+ * @returns {boolean} - True if a barrier was removed
+ */
+function removeBarrierAt(x, y) {
+    // Find barrier within click radius (use 2x barrier radius for easier clicking)
+    const clickRadius = config.BARRIER_RADIUS * 2;
+    const index = barriers.findIndex(barrier => {
+        const dx = barrier.x - x;
+        const dy = barrier.y - y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        return distance <= clickRadius;
+    });
+
+    if (index !== -1) {
+        barriers.splice(index, 1);
+        console.log(`Barrier removed at index ${index}, remaining: ${barriers.length}`);
+        updateBarrierCount();
+        return true;
+    }
+    return false;
+}
+
+/**
  * Update the UI display showing barrier count
  */
 function updateBarrierCount() {
@@ -1603,11 +1628,19 @@ function correctRadius (radius) {
 canvas.addEventListener('mousedown', e => {
     let posX = scaleByPixelRatio(e.offsetX);
     let posY = scaleByPixelRatio(e.offsetY);
+    let texX = posX / canvas.width;
+    let texY = 1.0 - posY / canvas.height;
+
+    // BARRIER FEATURE: Right-click to remove barrier
+    if (e.button === 2) {
+        e.preventDefault();
+        if (removeBarrierAt(texX, texY)) {
+            return; // Barrier was removed, don't add fluid
+        }
+    }
 
     // BARRIER FEATURE: Shift+Click to place barrier
     if (e.shiftKey) {
-        let texX = posX / canvas.width;
-        let texY = 1.0 - posY / canvas.height;
         addBarrier(texX, texY);
         return; // Don't add fluid when placing barrier
     }
@@ -1702,6 +1735,11 @@ window.addEventListener('keydown', e => {
             instructions.style.display = instructions.style.display === 'none' ? 'block' : 'none';
         }
     }
+});
+
+// BARRIER FEATURE: Prevent context menu on canvas (for right-click barrier removal)
+canvas.addEventListener('contextmenu', e => {
+    e.preventDefault();
 });
 
 function updatePointerDownData (pointer, id, posX, posY) {

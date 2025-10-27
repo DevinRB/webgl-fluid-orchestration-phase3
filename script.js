@@ -106,6 +106,7 @@ pointers.push(new pointerPrototype());
 // BARRIER FEATURE: Array to store barrier positions
 // Each barrier is { x: number (0-1), y: number (0-1), radius: number }
 let barriers = [];
+let barrierPreview = null; // { x, y, radius } when Shift is held
 
 /**
  * Add a barrier at the specified texture coordinates
@@ -1445,20 +1446,33 @@ function drawDisplay (target) {
 
 // BARRIER FEATURE: Draw barriers as bright white circles
 function drawBarriers(target) {
-    if (barriers.length === 0) return;
+    const allBarriers = barriers.length === 0 && !barrierPreview ? null : [...barriers];
+    if (!allBarriers && !barrierPreview) return;
 
     // Use splatProgram to draw bright white circles at barrier positions
     splatProgram.bind();
     gl.uniform1i(splatProgram.uniforms.uTarget, dye.read.attach(0));
     gl.uniform1f(splatProgram.uniforms.aspectRatio, canvas.width / canvas.height);
 
-    barriers.forEach(barrier => {
-        gl.uniform2f(splatProgram.uniforms.point, barrier.x, barrier.y);
-        gl.uniform3f(splatProgram.uniforms.color, 10.0, 10.0, 10.0); // Bright white (10x intensity)
-        gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius));
+    // Draw all placed barriers
+    if (allBarriers) {
+        barriers.forEach(barrier => {
+            gl.uniform2f(splatProgram.uniforms.point, barrier.x, barrier.y);
+            gl.uniform3f(splatProgram.uniforms.color, 10.0, 10.0, 10.0); // Bright white (10x intensity)
+            gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius));
+            blit(dye.write);
+            dye.swap();
+        });
+    }
+
+    // Draw preview barrier if Shift is held
+    if (barrierPreview) {
+        gl.uniform2f(splatProgram.uniforms.point, barrierPreview.x, barrierPreview.y);
+        gl.uniform3f(splatProgram.uniforms.color, 5.0, 5.0, 5.0); // Dimmer for preview
+        gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrierPreview.radius));
         blit(dye.write);
         dye.swap();
-    });
+    }
 }
 
 function applyBloom (source, destination) {
@@ -1594,6 +1608,17 @@ canvas.addEventListener('mousedown', e => {
 });
 
 canvas.addEventListener('mousemove', e => {
+    // BARRIER FEATURE: Show preview when Shift is held
+    if (e.shiftKey) {
+        let posX = scaleByPixelRatio(e.offsetX);
+        let posY = scaleByPixelRatio(e.offsetY);
+        let texX = posX / canvas.width;
+        let texY = 1.0 - posY / canvas.height;
+        barrierPreview = { x: texX, y: texY, radius: config.BARRIER_RADIUS };
+    } else {
+        barrierPreview = null;
+    }
+
     let pointer = pointers[0];
     if (!pointer.down) return;
     let posX = scaleByPixelRatio(e.offsetX);

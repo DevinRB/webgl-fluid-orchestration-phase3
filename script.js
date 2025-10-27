@@ -83,7 +83,7 @@ let config = {
     SUNRAYS_RESOLUTION: 196,
     SUNRAYS_WEIGHT: 1.0,
     // BARRIER FEATURE: Configuration
-    BARRIER_RADIUS: 0.02,
+    BARRIER_RADIUS: 0.002,
 }
 
 function pointerPrototype () {
@@ -477,7 +477,7 @@ function startGUI () {
     } }, 'fun').name('Random splats');
 
     // BARRIER FEATURE: GUI controls
-    gui.add(config, 'BARRIER_RADIUS', 0.005, 0.1).name('barrier radius');
+    gui.add(config, 'BARRIER_RADIUS', 0.0005, 0.01).name('barrier radius');
     gui.add({ clearBarriers: clearBarriers }, 'clearBarriers').name('Clear barriers (C)');
     gui.add({ saveBarriers: saveBarriers }, 'saveBarriers').name('Save barriers');
     gui.add({ loadBarriers: loadBarriers }, 'loadBarriers').name('Load barriers');
@@ -1898,13 +1898,13 @@ window.addEventListener('keydown', e => {
     }
     // BARRIER FEATURE: Press '+' or '=' to increase barrier size
     if (e.key === '+' || e.key === '=') {
-        config.BARRIER_RADIUS = Math.min(0.1, config.BARRIER_RADIUS + 0.005);
-        console.log(`Barrier radius increased to ${config.BARRIER_RADIUS.toFixed(3)}`);
+        config.BARRIER_RADIUS = Math.min(0.01, config.BARRIER_RADIUS + 0.0005);
+        console.log(`Barrier radius increased to ${config.BARRIER_RADIUS.toFixed(4)}`);
     }
     // BARRIER FEATURE: Press '-' or '_' to decrease barrier size
     if (e.key === '-' || e.key === '_') {
-        config.BARRIER_RADIUS = Math.max(0.005, config.BARRIER_RADIUS - 0.005);
-        console.log(`Barrier radius decreased to ${config.BARRIER_RADIUS.toFixed(3)}`);
+        config.BARRIER_RADIUS = Math.max(0.0005, config.BARRIER_RADIUS - 0.0005);
+        console.log(`Barrier radius decreased to ${config.BARRIER_RADIUS.toFixed(4)}`);
     }
     // BARRIER FEATURE: Press Ctrl+S to save barriers
     if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') {

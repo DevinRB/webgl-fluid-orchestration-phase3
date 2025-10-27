@@ -1393,18 +1393,18 @@ function drawDisplay (target) {
     blit(target);
 }
 
-// BARRIER FEATURE: Draw barriers as white circles
+// BARRIER FEATURE: Draw barriers as bright white circles
 function drawBarriers(target) {
     if (barriers.length === 0) return;
 
-    // Use splatProgram to draw white circles at barrier positions
+    // Use splatProgram to draw bright white circles at barrier positions
     splatProgram.bind();
     gl.uniform1i(splatProgram.uniforms.uTarget, dye.read.attach(0));
     gl.uniform1f(splatProgram.uniforms.aspectRatio, canvas.width / canvas.height);
 
     barriers.forEach(barrier => {
         gl.uniform2f(splatProgram.uniforms.point, barrier.x, barrier.y);
-        gl.uniform3f(splatProgram.uniforms.color, 1.0, 1.0, 1.0); // White color
+        gl.uniform3f(splatProgram.uniforms.color, 10.0, 10.0, 10.0); // Bright white (10x intensity)
         gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius));
         blit(dye.write);
         dye.swap();

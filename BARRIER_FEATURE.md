@@ -8,7 +8,9 @@ This WebGL Fluid Simulation now includes interactive barrier placement that allo
 
 ### Desktop
 - **Place Barrier**: Hold `Shift` key and click anywhere on the canvas
+- **Preview Placement**: Hold `Shift` key and move mouse to see preview circle before clicking
 - **Clear All Barriers**: Press `C` key
+- **Hide/Show Instructions**: Press `H` key to toggle instruction overlay
 - **Adjust Barrier Size**: Use the "barrier radius" slider in the GUI (right side)
 - **Clear Barriers (Alternative)**: Click "Clear barriers (C)" button in GUI
 
@@ -27,7 +29,12 @@ let barriers = [];  // Array of {x, y, radius} objects
 ### Visual Rendering
 - Barriers appear as bright white circles
 - Rendered at 10x intensity for high visibility
+- Preview circles shown at 5x intensity when Shift is held (before placement)
 - Persist across frames (redrawn each frame)
+- Barrier count display changes color based on performance:
+  - Blue (normal): < 30 barriers
+  - Orange (caution): 30-50 barriers
+  - Red (warning): > 50 barriers
 
 ### Physics
 - Velocity is zeroed out at barrier positions

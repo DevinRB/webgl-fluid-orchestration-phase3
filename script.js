@@ -137,6 +137,17 @@ function updateBarrierCount() {
     const countEl = document.getElementById('barrier-count');
     if (countEl) {
         countEl.textContent = barriers.length;
+        // Performance warning for many barriers
+        if (barriers.length > 50) {
+            countEl.style.color = '#F44';
+            countEl.title = 'Warning: High barrier count may affect performance';
+        } else if (barriers.length > 30) {
+            countEl.style.color = '#FA4';
+            countEl.title = 'Caution: Moderate barrier count';
+        } else {
+            countEl.style.color = '#4AF';
+            countEl.title = '';
+        }
     }
 }
 

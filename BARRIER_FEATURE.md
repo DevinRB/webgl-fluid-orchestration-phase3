@@ -14,8 +14,10 @@ This WebGL Fluid Simulation now includes interactive barrier placement that allo
 - **Adjust Size (Quick)**: Press `+` or `-` keys to increase/decrease barrier radius
 - **Adjust Size (Precise)**: Use the "barrier radius" slider in the GUI (right side)
 - **Hide/Show Instructions**: Press `H` key to toggle instruction overlay
-- **Save Layout**: Press `Ctrl+S` (or `Cmd+S` on Mac) or click "Save barriers" button in GUI
-- **Load Layout**: Press `Ctrl+L` (or `Cmd+L` on Mac) or click "Load barriers" button in GUI (auto-loads on page load)
+- **Save Layout (LocalStorage)**: Press `Ctrl+S` (or `Cmd+S` on Mac) or click "Save barriers" button in GUI
+- **Load Layout (LocalStorage)**: Press `Ctrl+L` (or `Cmd+L` on Mac) or click "Load barriers" button in GUI (auto-loads on page load)
+- **Export to File**: Click "Export to file" button in GUI to download barriers as JSON
+- **Import from File**: Click "Import from file" button in GUI to upload a JSON barrier layout
 
 ### Mobile/Touch
 - **Place Barrier**: Use two-finger touch simultaneously
@@ -56,7 +58,10 @@ let barriers = [];  // Array of {x, y, radius} objects
 - `clearBarriers()`: Remove all barriers
 - `removeBarrierAt(x, y)`: Remove a single barrier at specified location
 - `saveBarriers()`: Save current barrier layout to localStorage
-- `loadBarriers()`: Load barrier layout from localStorage
+- `loadBarriers(silent)`: Load barrier layout from localStorage
+- `exportBarriers()`: Export barriers to JSON file for download
+- `importBarriers()`: Import barriers from JSON file upload
+- `showNotification(message, type)`: Display toast notification to user
 - `applyBarriersToVelocity()`: Zero velocity at barrier positions
 - `applyBarriersToDye()`: Clear dye at barrier positions
 - `drawBarriers(target)`: Render barriers visually (with hover highlighting)

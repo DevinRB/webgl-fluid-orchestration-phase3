@@ -178,6 +178,65 @@ function loadBarriers(silent = false) {
 }
 
 /**
+ * Export barriers to a JSON file for download
+ */
+function exportBarriers() {
+    try {
+        const data = JSON.stringify(barriers, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `barrier-layout-${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        console.log(`Exported ${barriers.length} barriers to file`);
+        showNotification(`Exported ${barriers.length} barrier${barriers.length !== 1 ? 's' : ''}`, 'success');
+        return true;
+    } catch (e) {
+        console.error('Failed to export barriers:', e);
+        showNotification('Failed to export barriers', 'error');
+        return false;
+    }
+}
+
+/**
+ * Import barriers from a JSON file upload
+ */
+function importBarriers() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = event => {
+            try {
+                const imported = JSON.parse(event.target.result);
+                if (Array.isArray(imported)) {
+                    barriers = imported;
+                    barrierHoverIndex = -1;
+                    updateBarrierCount();
+                    console.log(`Imported ${barriers.length} barriers from file`);
+                    showNotification(`Imported ${barriers.length} barrier${barriers.length !== 1 ? 's' : ''}`, 'success');
+                } else {
+                    throw new Error('Invalid format: expected array of barriers');
+                }
+            } catch (e) {
+                console.error('Failed to import barriers:', e);
+                showNotification('Failed to import barriers: invalid file format', 'error');
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+/**
  * Remove a single barrier at the specified location (if one exists nearby)
  * @param {number} x - X coordinate in texture space (0-1)
  * @param {number} y - Y coordinate in texture space (0-1)
@@ -422,6 +481,8 @@ function startGUI () {
     gui.add({ clearBarriers: clearBarriers }, 'clearBarriers').name('Clear barriers (C)');
     gui.add({ saveBarriers: saveBarriers }, 'saveBarriers').name('Save barriers');
     gui.add({ loadBarriers: loadBarriers }, 'loadBarriers').name('Load barriers');
+    gui.add({ exportBarriers: exportBarriers }, 'exportBarriers').name('Export to file');
+    gui.add({ importBarriers: importBarriers }, 'importBarriers').name('Import from file');
 
     let bloomFolder = gui.addFolder('Bloom');
     bloomFolder.add(config, 'BLOOM').name('enabled').onFinishChange(updateKeywords);

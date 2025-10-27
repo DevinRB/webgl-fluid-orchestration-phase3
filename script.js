@@ -1845,6 +1845,16 @@ window.addEventListener('keydown', e => {
         config.BARRIER_RADIUS = Math.max(0.005, config.BARRIER_RADIUS - 0.005);
         console.log(`Barrier radius decreased to ${config.BARRIER_RADIUS.toFixed(3)}`);
     }
+    // BARRIER FEATURE: Press Ctrl+S to save barriers
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') {
+        e.preventDefault(); // Prevent browser's save dialog
+        saveBarriers();
+    }
+    // BARRIER FEATURE: Press Ctrl+L to load barriers
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyL') {
+        e.preventDefault();
+        loadBarriers();
+    }
 });
 
 // BARRIER FEATURE: Prevent context menu on canvas (for right-click barrier removal)

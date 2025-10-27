@@ -14,8 +14,8 @@ This WebGL Fluid Simulation now includes interactive barrier placement that allo
 - **Adjust Size (Quick)**: Press `+` or `-` keys to increase/decrease barrier radius
 - **Adjust Size (Precise)**: Use the "barrier radius" slider in the GUI (right side)
 - **Hide/Show Instructions**: Press `H` key to toggle instruction overlay
-- **Save Layout**: Click "Save barriers" button in GUI (persists to localStorage)
-- **Load Layout**: Click "Load barriers" button in GUI (auto-loads on page load)
+- **Save Layout**: Press `Ctrl+S` (or `Cmd+S` on Mac) or click "Save barriers" button in GUI
+- **Load Layout**: Press `Ctrl+L` (or `Cmd+L` on Mac) or click "Load barriers" button in GUI (auto-loads on page load)
 
 ### Mobile/Touch
 - **Place Barrier**: Use two-finger touch simultaneously

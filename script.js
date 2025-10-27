@@ -82,6 +82,8 @@ let config = {
     SUNRAYS: true,
     SUNRAYS_RESOLUTION: 196,
     SUNRAYS_WEIGHT: 1.0,
+    // BARRIER FEATURE: Configuration
+    BARRIER_RADIUS: 0.02,
 }
 
 function pointerPrototype () {
@@ -104,9 +106,10 @@ pointers.push(new pointerPrototype());
 // BARRIER FEATURE: Array to store barrier positions
 let barriers = [];
 
-function addBarrier(x, y, radius = 0.02) {
+function addBarrier(x, y, radius = null) {
+    radius = radius || config.BARRIER_RADIUS;
     barriers.push({ x, y, radius });
-    console.log(`Barrier added at (${x.toFixed(3)}, ${y.toFixed(3)}), total: ${barriers.length}`);
+    console.log(`Barrier added at (${x.toFixed(3)}, ${y.toFixed(3)}), radius: ${radius.toFixed(3)}, total: ${barriers.length}`);
 }
 
 function clearBarriers() {
@@ -254,6 +257,10 @@ function startGUI () {
     gui.add({ fun: () => {
         splatStack.push(parseInt(Math.random() * 20) + 5);
     } }, 'fun').name('Random splats');
+
+    // BARRIER FEATURE: GUI controls
+    gui.add(config, 'BARRIER_RADIUS', 0.005, 0.1).name('barrier radius');
+    gui.add({ clearBarriers: clearBarriers }, 'clearBarriers').name('Clear barriers (C)');
 
     let bloomFolder = gui.addFolder('Bloom');
     bloomFolder.add(config, 'BLOOM').name('enabled').onFinishChange(updateKeywords);

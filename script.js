@@ -104,8 +104,15 @@ let splatStack = [];
 pointers.push(new pointerPrototype());
 
 // BARRIER FEATURE: Array to store barrier positions
+// Each barrier is { x: number (0-1), y: number (0-1), radius: number }
 let barriers = [];
 
+/**
+ * Add a barrier at the specified texture coordinates
+ * @param {number} x - X coordinate in texture space (0-1)
+ * @param {number} y - Y coordinate in texture space (0-1)
+ * @param {number|null} radius - Barrier radius (defaults to config.BARRIER_RADIUS)
+ */
 function addBarrier(x, y, radius = null) {
     radius = radius || config.BARRIER_RADIUS;
     barriers.push({ x, y, radius });
@@ -113,12 +120,18 @@ function addBarrier(x, y, radius = null) {
     updateBarrierCount();
 }
 
+/**
+ * Remove all barriers from the simulation
+ */
 function clearBarriers() {
     barriers = [];
     console.log('All barriers cleared');
     updateBarrierCount();
 }
 
+/**
+ * Update the UI display showing barrier count
+ */
 function updateBarrierCount() {
     const countEl = document.getElementById('barrier-count');
     if (countEl) {
@@ -126,7 +139,11 @@ function updateBarrierCount() {
     }
 }
 
-// BARRIER FEATURE: Zero out velocity at barrier positions
+/**
+ * BARRIER FEATURE: Zero out velocity at barrier positions
+ * Called each frame during simulation step to prevent fluid flow through barriers
+ * Applies barriers 3 times with 1.2x radius for stronger blocking effect
+ */
 function applyBarriersToVelocity() {
     if (barriers.length === 0) return;
 
@@ -146,7 +163,10 @@ function applyBarriersToVelocity() {
     }
 }
 
-// BARRIER FEATURE: Clear dye at barrier positions for solid appearance
+/**
+ * BARRIER FEATURE: Clear dye at barrier positions for solid appearance
+ * Reduces dye density at barriers so they don't get colored by passing fluid
+ */
 function applyBarriersToDye() {
     if (barriers.length === 0) return;
 

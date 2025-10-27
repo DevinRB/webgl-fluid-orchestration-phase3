@@ -7,12 +7,14 @@ This WebGL Fluid Simulation now includes interactive barrier placement that allo
 ## Usage
 
 ### Desktop
-- **Place Barrier**: Hold `Shift` key and click anywhere on the canvas
+- **Place Barrier**: Hold `Shift` key and click anywhere on the canvas (cursor shows crosshair)
 - **Preview Placement**: Hold `Shift` key and move mouse to see preview circle before clicking
-- **Clear All Barriers**: Press `C` key
+- **Remove Barrier**: Right-click on an existing barrier (hover highlights it in red, cursor shows pointer)
+- **Clear All Barriers**: Press `C` key or click "Clear barriers (C)" button in GUI
 - **Hide/Show Instructions**: Press `H` key to toggle instruction overlay
 - **Adjust Barrier Size**: Use the "barrier radius" slider in the GUI (right side)
-- **Clear Barriers (Alternative)**: Click "Clear barriers (C)" button in GUI
+- **Save Layout**: Click "Save barriers" button in GUI (persists to localStorage)
+- **Load Layout**: Click "Load barriers" button in GUI (auto-loads on page load)
 
 ### Mobile/Touch
 - **Place Barrier**: Use two-finger touch simultaneously
@@ -51,9 +53,13 @@ let barriers = [];  // Array of {x, y, radius} objects
 ### Key Functions
 - `addBarrier(x, y, radius)`: Add a new barrier at texture coordinates
 - `clearBarriers()`: Remove all barriers
+- `removeBarrierAt(x, y)`: Remove a single barrier at specified location
+- `saveBarriers()`: Save current barrier layout to localStorage
+- `loadBarriers()`: Load barrier layout from localStorage
 - `applyBarriersToVelocity()`: Zero velocity at barrier positions
-- `drawBarriers(target)`: Render barriers visually
-- `updateBarrierCount()`: Update UI counter
+- `applyBarriersToDye()`: Clear dye at barrier positions
+- `drawBarriers(target)`: Render barriers visually (with hover highlighting)
+- `updateBarrierCount()`: Update UI counter with color-coded performance warnings
 
 ### Configuration
 - `config.BARRIER_RADIUS`: Default barrier radius (0.005 - 0.1)

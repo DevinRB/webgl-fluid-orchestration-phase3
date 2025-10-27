@@ -1548,6 +1548,18 @@ window.addEventListener('mouseup', () => {
 canvas.addEventListener('touchstart', e => {
     e.preventDefault();
     const touches = e.targetTouches;
+
+    // BARRIER FEATURE: Two-finger touch to place barrier (mobile equivalent of Shift+Click)
+    if (touches.length === 2) {
+        // Use first touch point for barrier placement
+        let posX = scaleByPixelRatio(touches[0].pageX);
+        let posY = scaleByPixelRatio(touches[0].pageY);
+        let texX = posX / canvas.width;
+        let texY = 1.0 - posY / canvas.height;
+        addBarrier(texX, texY);
+        return; // Don't process as normal touch
+    }
+
     while (touches.length >= pointers.length)
         pointers.push(new pointerPrototype());
     for (let i = 0; i < touches.length; i++) {

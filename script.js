@@ -122,13 +122,16 @@ function applyBarriersToVelocity() {
     gl.uniform1i(splatProgram.uniforms.uTarget, velocity.read.attach(0));
     gl.uniform1f(splatProgram.uniforms.aspectRatio, canvas.width / canvas.height);
 
-    barriers.forEach(barrier => {
-        gl.uniform2f(splatProgram.uniforms.point, barrier.x, barrier.y);
-        gl.uniform3f(splatProgram.uniforms.color, 0.0, 0.0, 0.0); // Zero velocity
-        gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius));
-        blit(velocity.write);
-        velocity.swap();
-    });
+    // Apply barriers multiple times for stronger effect
+    for (let iteration = 0; iteration < 3; iteration++) {
+        barriers.forEach(barrier => {
+            gl.uniform2f(splatProgram.uniforms.point, barrier.x, barrier.y);
+            gl.uniform3f(splatProgram.uniforms.color, 0.0, 0.0, 0.0); // Zero velocity
+            gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius * 1.2)); // Slightly larger for better blocking
+            blit(velocity.write);
+            velocity.swap();
+        });
+    }
 }
 
 const { gl, ext } = getWebGLContext(canvas);

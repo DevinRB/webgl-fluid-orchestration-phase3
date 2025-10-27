@@ -101,6 +101,16 @@ let pointers = [];
 let splatStack = [];
 pointers.push(new pointerPrototype());
 
+// AIDEV-NOTE: Barrier system data structures - Agent B2 (TDZ prevention)
+let barriers = [];
+let barrierMode = false;
+const MAX_BARRIERS = 20;
+const DEFAULT_BARRIER_RADIUS = 0.05;
+
+// Overlay canvas for barrier rendering (Agent A2 will use these)
+let barrierCanvas = null;
+let barrierCtx = null;
+
 const { gl, ext } = getWebGLContext(canvas);
 
 if (isMobile()) {
@@ -235,6 +245,16 @@ function startGUI () {
     captureFolder.addColor(config, 'BACK_COLOR').name('background color');
     captureFolder.add(config, 'TRANSPARENT').name('transparent');
     captureFolder.add({ fun: captureScreenshot }, 'fun').name('take screenshot');
+
+    // AIDEV-NOTE: Barrier controls - Agent A1 implementation
+    let barrierFolder = gui.addFolder('Barriers');
+    let barrierModeController = { enabled: false };
+    barrierFolder.add(barrierModeController, 'enabled')
+        .name('Barrier Mode')
+        .onChange(value => { barrierMode = value; });
+    barrierFolder.add({ fun: () => { clearBarriers(); } }, 'fun').name('Clear Barriers');
+    let barrierCountController = { count: 0 };
+    barrierFolder.add(barrierCountController, 'count').name('Barriers').listen();
 
     let github = gui.add({ fun : () => {
         window.open('https://github.com/PavelDoGreat/WebGL-Fluid-Simulation');
@@ -755,6 +775,10 @@ const advectionShader = compileShader(gl.FRAGMENT_SHADER, `
     uniform float dt;
     uniform float dissipation;
 
+    // AIDEV-NOTE: Barrier uniforms - Agent B1
+    uniform vec3 barriers[20];
+    uniform int barrierCount;
+
     vec4 bilerp (sampler2D sam, vec2 uv, vec2 tsize) {
         vec2 st = uv / tsize - 0.5;
 
@@ -770,6 +794,18 @@ const advectionShader = compileShader(gl.FRAGMENT_SHADER, `
     }
 
     void main () {
+        // AIDEV-NOTE: Check if inside any barrier - Agent B1
+        for (int i = 0; i < 20; i++) {
+            if (i >= barrierCount) break;
+
+            float dist = distance(vUv, barriers[i].xy);
+            if (dist < barriers[i].z) {
+                gl_FragColor = vec4(0.0);
+                return;
+            }
+        }
+
+        // Normal advection
     #ifdef MANUAL_FILTERING
         vec2 coord = vUv - dt * bilerp(uVelocity, vUv, texelSize).xy * texelSize;
         vec4 result = bilerp(uSource, coord, dyeTexelSize);
@@ -1169,6 +1205,9 @@ updateKeywords();
 initFramebuffers();
 multipleSplats(parseInt(Math.random() * 20) + 5);
 
+// AIDEV-NOTE: Initialize barrier overlay - Agent B2
+initBarrierOverlay();
+
 let lastUpdateTime = Date.now();
 let colorUpdateTimer = 0.0;
 update();
@@ -1182,6 +1221,10 @@ function update () {
     if (!config.PAUSED)
         step(dt);
     render(null);
+
+    // AIDEV-NOTE: Call barrier rendering - Agent B2
+    drawBarriers();
+
     requestAnimationFrame(update);
 }
 
@@ -1274,6 +1317,14 @@ function step (dt) {
 
     advectionProgram.bind();
     gl.uniform2f(advectionProgram.uniforms.texelSize, velocity.texelSizeX, velocity.texelSizeY);
+
+    // AIDEV-NOTE: Pass barrier uniforms to shader - Agent B2
+    let barrierCountLocation = gl.getUniformLocation(advectionProgram.program, 'barrierCount');
+    gl.uniform1i(barrierCountLocation, barriers.length);
+    for (let i = 0; i < barriers.length && i < MAX_BARRIERS; i++) {
+        let barrierLocation = gl.getUniformLocation(advectionProgram.program, `barriers[${i}]`);
+        gl.uniform3f(barrierLocation, barriers[i].x, barriers[i].y, barriers[i].radius);
+    }
     if (!ext.supportLinearFiltering)
         gl.uniform2f(advectionProgram.uniforms.dyeTexelSize, velocity.texelSizeX, velocity.texelSizeY);
     let velocityId = velocity.read.attach(0);
@@ -1464,6 +1515,25 @@ function correctRadius (radius) {
 canvas.addEventListener('mousedown', e => {
     let posX = scaleByPixelRatio(e.offsetX);
     let posY = scaleByPixelRatio(e.offsetY);
+
+    // AIDEV-NOTE: Barrier placement - Agent B2
+    if (barrierMode && barriers.length < MAX_BARRIERS) {
+        let simX = posX / canvas.width;
+        let simY = 1.0 - (posY / canvas.height);
+
+        barriers.push({
+            x: simX,
+            y: simY,
+            radius: DEFAULT_BARRIER_RADIUS
+        });
+
+        if (typeof barrierCountController !== 'undefined') {
+            barrierCountController.count = barriers.length;
+        }
+
+        return;
+    }
+
     let pointer = pointers.find(p => p.id == -1);
     if (pointer == null)
         pointer = new pointerPrototype();
@@ -1643,4 +1713,53 @@ function hashCode (s) {
         hash |= 0; // Convert to 32bit integer
     }
     return hash;
-};
+}
+
+// AIDEV-NOTE: Initialize barrier overlay canvas - Agent A2
+function initBarrierOverlay() {
+    if (!barrierCanvas) {
+        barrierCanvas = document.createElement('canvas');
+        barrierCanvas.style.position = 'absolute';
+        barrierCanvas.style.left = '0';
+        barrierCanvas.style.top = '0';
+        barrierCanvas.style.pointerEvents = 'none';
+        barrierCanvas.style.zIndex = '10';
+        document.body.appendChild(barrierCanvas);
+        barrierCtx = barrierCanvas.getContext('2d');
+    }
+
+    barrierCanvas.width = canvas.width;
+    barrierCanvas.height = canvas.height;
+    barrierCanvas.style.width = canvas.clientWidth + 'px';
+    barrierCanvas.style.height = canvas.clientHeight + 'px';
+}
+
+// AIDEV-NOTE: Draw barriers on overlay canvas - Agent A2
+function drawBarriers() {
+    if (!barrierCanvas || !barrierCtx) return;
+
+    barrierCtx.clearRect(0, 0, barrierCanvas.width, barrierCanvas.height);
+
+    barriers.forEach(barrier => {
+        let x = barrier.x * barrierCanvas.width;
+        let y = (1.0 - barrier.y) * barrierCanvas.height;
+        let radius = barrier.radius * Math.min(barrierCanvas.width, barrierCanvas.height);
+
+        barrierCtx.beginPath();
+        barrierCtx.arc(x, y, radius, 0, Math.PI * 2);
+        barrierCtx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+        barrierCtx.fill();
+        barrierCtx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+        barrierCtx.lineWidth = 2;
+        barrierCtx.stroke();
+    });
+}
+
+// AIDEV-NOTE: Clear all barriers - Agent A2
+function clearBarriers() {
+    barriers = [];
+    if (typeof barrierCountController !== 'undefined') {
+        barrierCountController.count = 0;
+    }
+    drawBarriers();
+}

@@ -110,11 +110,20 @@ function addBarrier(x, y, radius = null) {
     radius = radius || config.BARRIER_RADIUS;
     barriers.push({ x, y, radius });
     console.log(`Barrier added at (${x.toFixed(3)}, ${y.toFixed(3)}), radius: ${radius.toFixed(3)}, total: ${barriers.length}`);
+    updateBarrierCount();
 }
 
 function clearBarriers() {
     barriers = [];
     console.log('All barriers cleared');
+    updateBarrierCount();
+}
+
+function updateBarrierCount() {
+    const countEl = document.getElementById('barrier-count');
+    if (countEl) {
+        countEl.textContent = barriers.length;
+    }
 }
 
 // BARRIER FEATURE: Zero out velocity at barrier positions

@@ -318,19 +318,21 @@ function updateBarrierCount() {
 function applyBarriersToVelocity() {
     if (barriers.length === 0) return;
 
-    splatProgram.bind();
-    gl.uniform1i(splatProgram.uniforms.uTarget, velocity.read.attach(0));
-    gl.uniform1f(splatProgram.uniforms.aspectRatio, canvas.width / canvas.height);
-
     // Apply barriers multiple times for stronger effect
     for (let iteration = 0; iteration < 3; iteration++) {
+        splatProgram.bind();
+        gl.uniform1i(splatProgram.uniforms.uTarget, velocity.read.attach(0));
+        gl.uniform1f(splatProgram.uniforms.aspectRatio, canvas.width / canvas.height);
+
         barriers.forEach(barrier => {
             gl.uniform2f(splatProgram.uniforms.point, barrier.x, barrier.y);
             gl.uniform3f(splatProgram.uniforms.color, 0.0, 0.0, 0.0); // Zero velocity
             gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius * 1.2)); // Slightly larger for better blocking
             blit(velocity.write);
-            velocity.swap();
         });
+
+        // Swap once after all barriers in this iteration
+        velocity.swap();
     }
 }
 
@@ -351,8 +353,10 @@ function applyBarriersToDye() {
         gl.uniform3f(splatProgram.uniforms.color, 0.0, 0.0, 0.0); // Zero dye density
         gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius));
         blit(dye.write);
-        dye.swap();
     });
+
+    // Swap once after all barriers are drawn
+    dye.swap();
 }
 
 const { gl, ext } = getWebGLContext(canvas);
@@ -1623,31 +1627,28 @@ function drawDisplay (target) {
 
 // BARRIER FEATURE: Draw barriers as bright white circles
 function drawBarriers(target) {
-    const allBarriers = barriers.length === 0 && !barrierPreview ? null : [...barriers];
-    if (!allBarriers && !barrierPreview) return;
+    if (barriers.length === 0 && !barrierPreview) return;
 
     // Use splatProgram to draw bright white circles at barrier positions
     splatProgram.bind();
     gl.uniform1i(splatProgram.uniforms.uTarget, dye.read.attach(0));
     gl.uniform1f(splatProgram.uniforms.aspectRatio, canvas.width / canvas.height);
 
-    // Draw all placed barriers
-    if (allBarriers) {
-        barriers.forEach((barrier, index) => {
-            gl.uniform2f(splatProgram.uniforms.point, barrier.x, barrier.y);
+    // Draw all placed barriers WITHOUT swapping between each one
+    barriers.forEach((barrier, index) => {
+        gl.uniform2f(splatProgram.uniforms.point, barrier.x, barrier.y);
 
-            // BARRIER FEATURE: Highlight hovered barrier in red (removal preview)
-            if (index === barrierHoverIndex) {
-                gl.uniform3f(splatProgram.uniforms.color, 0.5, 0.1, 0.1); // Red highlight
-            } else {
-                gl.uniform3f(splatProgram.uniforms.color, 0.5, 0.5, 0.5); // Bright white
-            }
+        // BARRIER FEATURE: Highlight hovered barrier in red (removal preview)
+        if (index === barrierHoverIndex) {
+            gl.uniform3f(splatProgram.uniforms.color, 0.5, 0.1, 0.1); // Red highlight
+        } else {
+            gl.uniform3f(splatProgram.uniforms.color, 0.5, 0.5, 0.5); // Bright white
+        }
 
-            gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius));
-            blit(dye.write);
-            dye.swap();
-        });
-    }
+        gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius));
+        blit(dye.write);
+        // DO NOT SWAP HERE - it corrupts the render
+    });
 
     // Draw preview barrier if Shift is held
     if (barrierPreview) {
@@ -1655,8 +1656,10 @@ function drawBarriers(target) {
         gl.uniform3f(splatProgram.uniforms.color, 0.3, 0.3, 0.3); // Dimmer for preview
         gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrierPreview.radius));
         blit(dye.write);
-        dye.swap();
     }
+
+    // Swap ONCE at the end after all barriers are drawn
+    dye.swap();
 }
 
 function applyBloom (source, destination) {

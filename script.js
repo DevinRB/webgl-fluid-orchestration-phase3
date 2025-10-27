@@ -101,6 +101,19 @@ let pointers = [];
 let splatStack = [];
 pointers.push(new pointerPrototype());
 
+// BARRIER FEATURE: Array to store barrier positions
+let barriers = [];
+
+function addBarrier(x, y, radius = 0.02) {
+    barriers.push({ x, y, radius });
+    console.log(`Barrier added at (${x.toFixed(3)}, ${y.toFixed(3)}), total: ${barriers.length}`);
+}
+
+function clearBarriers() {
+    barriers = [];
+    console.log('All barriers cleared');
+}
+
 const { gl, ext } = getWebGLContext(canvas);
 
 if (isMobile()) {
@@ -1314,6 +1327,9 @@ function render (target) {
     if (target == null && config.TRANSPARENT)
         drawCheckerboard(target);
     drawDisplay(target);
+
+    // BARRIER FEATURE: Draw barriers on top of fluid
+    drawBarriers(target);
 }
 
 function drawColor (target, color) {
@@ -1345,6 +1361,24 @@ function drawDisplay (target) {
     if (config.SUNRAYS)
         gl.uniform1i(displayMaterial.uniforms.uSunrays, sunrays.attach(3));
     blit(target);
+}
+
+// BARRIER FEATURE: Draw barriers as white circles
+function drawBarriers(target) {
+    if (barriers.length === 0) return;
+
+    // Use splatProgram to draw white circles at barrier positions
+    splatProgram.bind();
+    gl.uniform1i(splatProgram.uniforms.uTarget, dye.read.attach(0));
+    gl.uniform1f(splatProgram.uniforms.aspectRatio, canvas.width / canvas.height);
+
+    barriers.forEach(barrier => {
+        gl.uniform2f(splatProgram.uniforms.point, barrier.x, barrier.y);
+        gl.uniform3f(splatProgram.uniforms.color, 1.0, 1.0, 1.0); // White color
+        gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius));
+        blit(dye.write);
+        dye.swap();
+    });
 }
 
 function applyBloom (source, destination) {
@@ -1464,6 +1498,15 @@ function correctRadius (radius) {
 canvas.addEventListener('mousedown', e => {
     let posX = scaleByPixelRatio(e.offsetX);
     let posY = scaleByPixelRatio(e.offsetY);
+
+    // BARRIER FEATURE: Shift+Click to place barrier
+    if (e.shiftKey) {
+        let texX = posX / canvas.width;
+        let texY = 1.0 - posY / canvas.height;
+        addBarrier(texX, texY);
+        return; // Don't add fluid when placing barrier
+    }
+
     let pointer = pointers.find(p => p.id == -1);
     if (pointer == null)
         pointer = new pointerPrototype();
@@ -1521,6 +1564,9 @@ window.addEventListener('keydown', e => {
         config.PAUSED = !config.PAUSED;
     if (e.key === ' ')
         splatStack.push(parseInt(Math.random() * 20) + 5);
+    // BARRIER FEATURE: Press 'C' to clear all barriers
+    if (e.code === 'KeyC')
+        clearBarriers();
 });
 
 function updatePointerDownData (pointer, id, posX, posY) {

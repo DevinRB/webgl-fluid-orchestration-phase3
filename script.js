@@ -133,6 +133,45 @@ function clearBarriers() {
 }
 
 /**
+ * Save current barriers to localStorage
+ */
+function saveBarriers() {
+    try {
+        const data = JSON.stringify(barriers);
+        localStorage.setItem('webgl-fluid-barriers', data);
+        console.log(`Saved ${barriers.length} barriers to localStorage`);
+        return true;
+    } catch (e) {
+        console.error('Failed to save barriers:', e);
+        return false;
+    }
+}
+
+/**
+ * Load barriers from localStorage
+ */
+function loadBarriers() {
+    try {
+        const data = localStorage.getItem('webgl-fluid-barriers');
+        if (data) {
+            const loaded = JSON.parse(data);
+            if (Array.isArray(loaded)) {
+                barriers = loaded;
+                barrierHoverIndex = -1;
+                console.log(`Loaded ${barriers.length} barriers from localStorage`);
+                updateBarrierCount();
+                return true;
+            }
+        }
+        console.log('No saved barriers found');
+        return false;
+    } catch (e) {
+        console.error('Failed to load barriers:', e);
+        return false;
+    }
+}
+
+/**
  * Remove a single barrier at the specified location (if one exists nearby)
  * @param {number} x - X coordinate in texture space (0-1)
  * @param {number} y - Y coordinate in texture space (0-1)
@@ -348,6 +387,8 @@ function startGUI () {
     // BARRIER FEATURE: GUI controls
     gui.add(config, 'BARRIER_RADIUS', 0.005, 0.1).name('barrier radius');
     gui.add({ clearBarriers: clearBarriers }, 'clearBarriers').name('Clear barriers (C)');
+    gui.add({ saveBarriers: saveBarriers }, 'saveBarriers').name('Save barriers');
+    gui.add({ loadBarriers: loadBarriers }, 'loadBarriers').name('Load barriers');
 
     let bloomFolder = gui.addFolder('Bloom');
     bloomFolder.add(config, 'BLOOM').name('enabled').onFinishChange(updateKeywords);
@@ -1295,6 +1336,9 @@ function updateKeywords () {
 updateKeywords();
 initFramebuffers();
 multipleSplats(parseInt(Math.random() * 20) + 5);
+
+// BARRIER FEATURE: Auto-load saved barriers on startup
+loadBarriers();
 
 let lastUpdateTime = Date.now();
 let colorUpdateTimer = 0.0;

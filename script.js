@@ -348,7 +348,7 @@ function applyBarriersToDye() {
     // Clear dye at barrier positions (set to dark/low density)
     barriers.forEach(barrier => {
         gl.uniform2f(splatProgram.uniforms.point, barrier.x, barrier.y);
-        gl.uniform3f(splatProgram.uniforms.color, 0.1, 0.1, 0.1); // Very low dye density
+        gl.uniform3f(splatProgram.uniforms.color, 0.0, 0.0, 0.0); // Zero dye density
         gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius));
         blit(dye.write);
         dye.swap();
@@ -1638,9 +1638,9 @@ function drawBarriers(target) {
 
             // BARRIER FEATURE: Highlight hovered barrier in red (removal preview)
             if (index === barrierHoverIndex) {
-                gl.uniform3f(splatProgram.uniforms.color, 10.0, 2.0, 2.0); // Red highlight
+                gl.uniform3f(splatProgram.uniforms.color, 0.5, 0.1, 0.1); // Red highlight
             } else {
-                gl.uniform3f(splatProgram.uniforms.color, 10.0, 10.0, 10.0); // Bright white (10x intensity)
+                gl.uniform3f(splatProgram.uniforms.color, 0.5, 0.5, 0.5); // Bright white
             }
 
             gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrier.radius));
@@ -1652,7 +1652,7 @@ function drawBarriers(target) {
     // Draw preview barrier if Shift is held
     if (barrierPreview) {
         gl.uniform2f(splatProgram.uniforms.point, barrierPreview.x, barrierPreview.y);
-        gl.uniform3f(splatProgram.uniforms.color, 5.0, 5.0, 5.0); // Dimmer for preview
+        gl.uniform3f(splatProgram.uniforms.color, 0.3, 0.3, 0.3); // Dimmer for preview
         gl.uniform1f(splatProgram.uniforms.radius, correctRadius(barrierPreview.radius));
         blit(dye.write);
         dye.swap();

@@ -140,17 +140,20 @@ function saveBarriers() {
         const data = JSON.stringify(barriers);
         localStorage.setItem('webgl-fluid-barriers', data);
         console.log(`Saved ${barriers.length} barriers to localStorage`);
+        showNotification(`Saved ${barriers.length} barrier${barriers.length !== 1 ? 's' : ''}`, 'success');
         return true;
     } catch (e) {
         console.error('Failed to save barriers:', e);
+        showNotification('Failed to save barriers', 'error');
         return false;
     }
 }
 
 /**
  * Load barriers from localStorage
+ * @param {boolean} silent - If true, don't show notifications
  */
-function loadBarriers() {
+function loadBarriers(silent = false) {
     try {
         const data = localStorage.getItem('webgl-fluid-barriers');
         if (data) {
@@ -160,13 +163,16 @@ function loadBarriers() {
                 barrierHoverIndex = -1;
                 console.log(`Loaded ${barriers.length} barriers from localStorage`);
                 updateBarrierCount();
+                if (!silent) showNotification(`Loaded ${barriers.length} barrier${barriers.length !== 1 ? 's' : ''}`, 'success');
                 return true;
             }
         }
         console.log('No saved barriers found');
+        if (!silent) showNotification('No saved barriers found', 'info');
         return false;
     } catch (e) {
         console.error('Failed to load barriers:', e);
+        if (!silent) showNotification('Failed to load barriers', 'error');
         return false;
     }
 }
@@ -195,6 +201,33 @@ function removeBarrierAt(x, y) {
         return true;
     }
     return false;
+}
+
+/**
+ * Show a temporary notification message to the user
+ * @param {string} message - Message to display
+ * @param {string} type - Type: 'success', 'error', or 'info'
+ */
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: ${type === 'success' ? 'rgba(76, 175, 80, 0.9)' : type === 'error' ? 'rgba(244, 67, 54, 0.9)' : 'rgba(33, 150, 243, 0.9)'};
+        color: white;
+        padding: 15px 25px;
+        border-radius: 5px;
+        font-family: Arial;
+        font-size: 14px;
+        z-index: 10000;
+        pointer-events: none;
+        animation: fadeInOut 2s ease-in-out;
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => document.body.removeChild(notification), 2000);
 }
 
 /**
@@ -1337,8 +1370,8 @@ updateKeywords();
 initFramebuffers();
 multipleSplats(parseInt(Math.random() * 20) + 5);
 
-// BARRIER FEATURE: Auto-load saved barriers on startup
-loadBarriers();
+// BARRIER FEATURE: Auto-load saved barriers on startup (silent mode)
+loadBarriers(true);
 
 let lastUpdateTime = Date.now();
 let colorUpdateTimer = 0.0;
